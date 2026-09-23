@@ -2,6 +2,7 @@ package com.segurosbolivar.polizas.controller;
 
 import com.segurosbolivar.polizas.domain.EstadoRiesgo;
 import com.segurosbolivar.polizas.domain.Poliza;
+import com.segurosbolivar.polizas.integration.CoreEdicionEvento;
 import com.segurosbolivar.polizas.repository.RiesgoRepository;
 import com.segurosbolivar.polizas.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -9,11 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -50,7 +54,7 @@ class PolizaControllerIT extends IntegrationTest {
         mockMvc.perform(get("/polizas").header(API_KEY_HEADER, API_KEY).param("tipo", "GRUPAL"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("INDIVIDUAL, COLECTIVA")));
+                .andExpect(jsonPath("$.detail").value(containsString("INDIVIDUAL, COLECTIVA")));
     }
 
     @Test
@@ -85,6 +89,8 @@ class PolizaControllerIT extends IntegrationTest {
 
         assertThat(polizaRepository.findById(poliza.getId()).orElseThrow().getValorCanon())
                 .isEqualByComparingTo("1052000.00");
+        verify(coreEdicionClient).enviarEdicion(
+                new CoreEdicionEvento("ACTUALIZACION", poliza.getId(), null, "RENOVACION_POLIZA"));
     }
 
     @Test
@@ -93,7 +99,8 @@ class PolizaControllerIT extends IntegrationTest {
 
         mockMvc.perform(post("/polizas/{id}/renovar", poliza.getId()).header(API_KEY_HEADER, API_KEY))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("cancelada")));
+                .andExpect(jsonPath("$.detail").value(containsString("cancelada")));
+        verifyNoInteractions(coreEdicionClient);
     }
 
     @Test
@@ -108,6 +115,8 @@ class PolizaControllerIT extends IntegrationTest {
         assertThat(riesgoRepository.findByPolizaIdOrderByIdAsc(poliza.getId()))
                 .hasSize(2)
                 .allMatch(r -> r.getEstado() == EstadoRiesgo.CANCELADO);
+        verify(coreEdicionClient).enviarEdicion(
+                new CoreEdicionEvento("ACTUALIZACION", poliza.getId(), null, "CANCELACION_POLIZA"));
     }
 
     @Test

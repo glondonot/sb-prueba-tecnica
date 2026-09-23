@@ -17,11 +17,22 @@ spring:
     web:
       pageable:
         max-page-size: 100
+  http:
+    clients:
+      # Timeouts del cliente HTTP hacia el CORE: fallar rápido en lugar de bloquear hilos.
+      connect-timeout: 2s
+      read-timeout: 3s
 
 polizas:
   renovacion:
     # IPC anual (%) aplicado al canon en cada renovación. Valor de referencia configurable por entorno.
     ipc-porcentaje: ${IPC_PORCENTAJE:5.20}
+  seguridad:
+    api-key-header: api-key
+    api-key: ${API_KEY:123456}
+  core:
+    # Servicio agnóstico de edición del CORE. Por defecto, el mock expuesto por esta misma aplicación.
+    url: ${CORE_URL:http://localhost:${server.port}/core-mock}
 
 server:
   port: ${PORT:8080}
@@ -37,6 +48,11 @@ management:
     health:
       probes:
         enabled: true
+
+logging:
+  pattern:
+    # Incluye el correlation id en cada línea de log.
+    correlation: "[%X{correlationId:-}] "
 
 springdoc:
   swagger-ui:
