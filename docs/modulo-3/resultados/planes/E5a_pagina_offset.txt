@@ -1,0 +1,14 @@
+-- Página profunda con OFFSET 100,000 LIMIT 50 (lee y descarta 100,000 filas)
+SELECT order_id, order_date, customer_name, total_amount
+        FROM mv_orders_by_country
+        WHERE country = 'México'
+         ORDER BY order_date DESC, order_id DESC OFFSET 100000 LIMIT 50
+
+Limit (actual rows=50 loops=1)
+  Buffers: shared hit=2438
+  ->  Index Only Scan using ix_mv_orders_country_fecha on mv_orders_by_country (actual rows=100050 loops=1)
+        Index Cond: (country = 'México'::text)
+        Heap Fetches: 0
+        Buffers: shared hit=2438
+Planning Time: 0.098 ms
+Execution Time: 11.092 ms

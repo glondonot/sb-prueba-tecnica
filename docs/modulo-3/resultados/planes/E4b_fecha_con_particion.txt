@@ -1,0 +1,28 @@
+-- Misma consulta sobre orders_part: partition pruning (solo lee 2026)
+SELECT o.order_id, o.order_date, c.customer_name, o.total_amount
+FROM orders_part o
+JOIN customers c ON o.customer_id = c.customer_id
+WHERE c.country = 'México'
+AND o.order_date >= DATE '2026-01-01'
+
+Gather (actual rows=51372 loops=1)
+  Workers Planned: 2
+  Workers Launched: 2
+  Buffers: shared hit=8538
+  ->  Parallel Hash Join (actual rows=17124 loops=3)
+        Hash Cond: (o.customer_id = c.customer_id)
+        Buffers: shared hit=8538
+        ->  Parallel Seq Scan on orders_p2026 o (actual rows=435520 loops=3)
+              Filter: (order_date >= '2026-01-01'::date)
+              Buffers: shared hit=8323
+        ->  Parallel Hash (actual rows=6519 loops=3)
+              Buckets: 32768  Batches: 1  Memory Usage: 1344kB
+              Buffers: shared hit=121
+              ->  Parallel Index Only Scan using ix_customers_country on customers c (actual rows=19557 loops=1)
+                    Index Cond: (country = 'México'::text)
+                    Heap Fetches: 0
+                    Buffers: shared hit=121
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.195 ms
+Execution Time: 80.432 ms

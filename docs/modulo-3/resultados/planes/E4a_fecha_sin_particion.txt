@@ -1,0 +1,27 @@
+-- Consulta con filtro de fecha (último año) sobre orders con índices de E2
+SELECT o.order_id, o.order_date, c.customer_name, o.total_amount
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+WHERE c.country = 'México'
+AND o.order_date >= DATE '2026-01-01'
+
+Gather (actual rows=51372 loops=1)
+  Workers Planned: 2
+  Workers Launched: 2
+  Buffers: shared hit=125639
+  ->  Nested Loop (actual rows=17124 loops=3)
+        Buffers: shared hit=125639
+        ->  Parallel Index Scan using customers_pkey on customers c (actual rows=6519 loops=3)
+              Filter: ((country)::text = 'México'::text)
+              Rows Removed by Filter: 160148
+              Buffers: shared hit=6123
+        ->  Index Only Scan using ix_orders_customer_id on orders o (actual rows=3 loops=19557)
+              Index Cond: (customer_id = c.customer_id)
+              Filter: (order_date >= '2026-01-01'::date)
+              Rows Removed by Filter: 17
+              Heap Fetches: 0
+              Buffers: shared hit=119516
+Planning:
+  Buffers: shared hit=18
+Planning Time: 0.309 ms
+Execution Time: 93.340 ms
