@@ -3,10 +3,12 @@ package com.segurosbolivar.polizas.support;
 import com.segurosbolivar.polizas.domain.Persona;
 import com.segurosbolivar.polizas.domain.Poliza;
 import com.segurosbolivar.polizas.domain.Riesgo;
+import com.segurosbolivar.polizas.integration.CoreEdicionClient;
 import com.segurosbolivar.polizas.repository.PolizaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -17,7 +19,8 @@ import java.util.UUID;
 /**
  * Base para pruebas de integración: contexto completo + MockMvc sobre H2.
  * Cada prueba crea sus propios datos (números de póliza únicos), por lo que no dependen
- * del orden de ejecución ni de los datos semilla.
+ * del orden de ejecución ni de los datos semilla. El cliente del CORE se reemplaza por un mock
+ * para verificar qué se le envía; el flujo HTTP real se prueba en {@code CoreSincronizacionE2EIT}.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -31,6 +34,9 @@ public abstract class IntegrationTest {
 
     @Autowired
     protected PolizaRepository polizaRepository;
+
+    @MockitoBean
+    protected CoreEdicionClient coreEdicionClient;
 
     @Autowired
     private TransactionTemplate transactionTemplate;

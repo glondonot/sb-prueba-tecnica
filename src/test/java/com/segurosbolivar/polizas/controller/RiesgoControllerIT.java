@@ -3,6 +3,7 @@ package com.segurosbolivar.polizas.controller;
 import com.segurosbolivar.polizas.domain.EstadoRiesgo;
 import com.segurosbolivar.polizas.domain.Poliza;
 import com.segurosbolivar.polizas.domain.Riesgo;
+import com.segurosbolivar.polizas.integration.CoreEdicionEvento;
 import com.segurosbolivar.polizas.repository.RiesgoRepository;
 import com.segurosbolivar.polizas.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,9 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -51,6 +55,8 @@ class RiesgoControllerIT extends IntegrationTest {
         assertThat(polizaRepository.findById(poliza.getId()).orElseThrow().getVersion())
                 .as("modificar riesgos incrementa la versión de la póliza (control de concurrencia)")
                 .isGreaterThan(versionInicial);
+        verify(coreEdicionClient).enviarEdicion(argThat(e -> e.polizaId().equals(poliza.getId())
+                && e.riesgoId() != null && e.operacion().equals("ADICION_RIESGO")));
     }
 
     @Test
@@ -63,6 +69,7 @@ class RiesgoControllerIT extends IntegrationTest {
                 .andExpect(jsonPath("$.detail", containsString("colectivas")));
 
         assertThat(riesgoRepository.findByPolizaIdOrderByIdAsc(poliza.getId())).hasSize(1);
+        verifyNoInteractions(coreEdicionClient);
     }
 
     @Test
@@ -109,6 +116,8 @@ class RiesgoControllerIT extends IntegrationTest {
 
         assertThat(riesgoRepository.findById(riesgos.get(1).getId()).orElseThrow().getEstado())
                 .isEqualTo(EstadoRiesgo.ACTIVO);
+        verify(coreEdicionClient).enviarEdicion(new CoreEdicionEvento(
+                "ACTUALIZACION", poliza.getId(), riesgos.get(0).getId(), "CANCELACION_RIESGO"));
     }
 
     @Test

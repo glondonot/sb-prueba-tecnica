@@ -9,6 +9,7 @@ import com.segurosbolivar.polizas.repository.PolizaRepository;
 import com.segurosbolivar.polizas.repository.RiesgoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,10 +22,13 @@ public class RiesgoService {
 
     private final PolizaRepository polizaRepository;
     private final RiesgoRepository riesgoRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public RiesgoService(PolizaRepository polizaRepository, RiesgoRepository riesgoRepository) {
+    public RiesgoService(PolizaRepository polizaRepository, RiesgoRepository riesgoRepository,
+                         ApplicationEventPublisher eventPublisher) {
         this.polizaRepository = polizaRepository;
         this.riesgoRepository = riesgoRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public RiesgoResponse agregar(Long polizaId, CrearRiesgoRequest request) {
@@ -35,6 +39,8 @@ public class RiesgoService {
 
         poliza.agregarRiesgo(riesgo);
         riesgoRepository.saveAndFlush(riesgo);
+        eventPublisher.publishEvent(
+                PolizaModificadaEvent.deRiesgo(polizaId, riesgo.getId(), OperacionPoliza.ADICION_RIESGO));
 
         log.info("Riesgo agregado polizaId={} riesgoId={}", polizaId, riesgo.getId());
         return RiesgoResponse.from(riesgo);
@@ -47,6 +53,8 @@ public class RiesgoService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Póliza", riesgo.getPoliza().getId()));
 
         poliza.cancelarRiesgo(riesgo);
+        eventPublisher.publishEvent(
+                PolizaModificadaEvent.deRiesgo(poliza.getId(), riesgoId, OperacionPoliza.CANCELACION_RIESGO));
 
         log.info("Riesgo cancelado polizaId={} riesgoId={}", poliza.getId(), riesgoId);
         return RiesgoResponse.from(riesgo);

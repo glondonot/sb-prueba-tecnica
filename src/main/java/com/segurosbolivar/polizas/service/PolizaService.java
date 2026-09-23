@@ -12,6 +12,7 @@ import com.segurosbolivar.polizas.repository.PolizaSpecifications;
 import com.segurosbolivar.polizas.repository.RiesgoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,12 +33,14 @@ public class PolizaService {
     private final PolizaRepository polizaRepository;
     private final RiesgoRepository riesgoRepository;
     private final IpcProvider ipcProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PolizaService(PolizaRepository polizaRepository, RiesgoRepository riesgoRepository,
-                         IpcProvider ipcProvider) {
+                         IpcProvider ipcProvider, ApplicationEventPublisher eventPublisher) {
         this.polizaRepository = polizaRepository;
         this.riesgoRepository = riesgoRepository;
         this.ipcProvider = ipcProvider;
+        this.eventPublisher = eventPublisher;
     }
 
     public PaginaResponse<PolizaResponse> listar(TipoPoliza tipo, EstadoPoliza estado, Pageable pageable) {
@@ -61,6 +64,7 @@ public class PolizaService {
         BigDecimal ipc = ipcProvider.ipcVigente();
 
         poliza.renovar(ipc);
+        eventPublisher.publishEvent(PolizaModificadaEvent.dePoliza(poliza.getId(), OperacionPoliza.RENOVACION_POLIZA));
 
         log.info("Póliza renovada polizaId={} numero={} ipc={} canonAnterior={} canonNuevo={}",
                 poliza.getId(), poliza.getNumero(), ipc, canonAnterior, poliza.getValorCanon());
@@ -72,6 +76,7 @@ public class PolizaService {
         Poliza poliza = buscar(polizaId);
 
         poliza.cancelar();
+        eventPublisher.publishEvent(PolizaModificadaEvent.dePoliza(poliza.getId(), OperacionPoliza.CANCELACION_POLIZA));
 
         log.info("Póliza cancelada polizaId={} numero={}", poliza.getId(), poliza.getNumero());
         return PolizaResponse.from(poliza);
