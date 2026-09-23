@@ -1,0 +1,70 @@
+### Colección de peticiones (IntelliJ HTTP Client / VS Code REST Client)
+### Los ids corresponden a los datos semilla (V2__datos_semilla.sql).
+
+@base = http://localhost:8080
+@apiKey = 123456
+
+### Listar todas las pólizas (paginado)
+GET {{base}}/polizas?page=0&size=10
+api-key: {{apiKey}}
+
+### Listar pólizas colectivas activas
+GET {{base}}/polizas?tipo=COLECTIVA&estado=ACTIVA
+api-key: {{apiKey}}
+
+### Riesgos de la póliza colectiva COL-2026-0001 (id 3)
+GET {{base}}/polizas/3/riesgos
+api-key: {{apiKey}}
+
+### Renovar póliza individual IND-2026-0001 (id 1): canon y prima + IPC, estado RENOVADA
+POST {{base}}/polizas/1/renovar
+api-key: {{apiKey}}
+
+### Renovar póliza cancelada IND-2025-0099 (id 5) -> 409
+POST {{base}}/polizas/5/renovar
+api-key: {{apiKey}}
+
+### Agregar riesgo a póliza colectiva (id 3) -> 201
+POST {{base}}/polizas/3/riesgos
+api-key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "direccionInmueble": "Calle 26 # 68-35 Apto 1502",
+  "ciudad": "Bogotá",
+  "arrendatario": { "documento": "1032456789", "nombre": "Camila Herrera" },
+  "arrendador":   { "documento": "79555444",   "nombre": "Mauricio Peña" }
+}
+
+### Agregar riesgo a póliza individual (id 2) -> 422
+POST {{base}}/polizas/2/riesgos
+api-key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "direccionInmueble": "Carrera 15 # 10-20",
+  "ciudad": "Medellín",
+  "arrendatario": { "documento": "1032456789", "nombre": "Camila Herrera" },
+  "arrendador":   { "documento": "79555444",   "nombre": "Mauricio Peña" }
+}
+
+### Cancelar un riesgo de la colectiva (riesgo id 3)
+POST {{base}}/riesgos/3/cancelar
+api-key: {{apiKey}}
+
+### Cancelar póliza colectiva (id 3): cancela también todos sus riesgos
+POST {{base}}/polizas/3/cancelar
+api-key: {{apiKey}}
+
+### Mock del CORE (registra el intento en logs)
+POST {{base}}/core-mock/evento
+api-key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "evento": "ACTUALIZACION",
+  "polizaId": 555
+}
+
+### Sin api-key -> 401
+GET {{base}}/polizas

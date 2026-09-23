@@ -1,0 +1,26 @@
+-- Línea base: solo PKs, FK sin índice, estadísticas al día
+SELECT o.order_id, o.order_date, c.customer_name, o.total_amount
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+WHERE c.country = 'México'
+
+Gather (actual rows=390043 loops=1)
+  Workers Planned: 2
+  Workers Launched: 2
+  Buffers: shared hit=46654 read=20848
+  ->  Parallel Hash Join (actual rows=130014 loops=3)
+        Hash Cond: (o.customer_id = c.customer_id)
+        Buffers: shared hit=46654 read=20848
+        ->  Parallel Seq Scan on orders o (actual rows=3333333 loops=3)
+              Buffers: shared hit=42847 read=20848
+        ->  Parallel Hash (actual rows=6519 loops=3)
+              Buckets: 32768  Batches: 1  Memory Usage: 1408kB
+              Buffers: shared hit=3651
+              ->  Parallel Seq Scan on customers c (actual rows=6519 loops=3)
+                    Filter: ((country)::text = 'México'::text)
+                    Rows Removed by Filter: 160148
+                    Buffers: shared hit=3651
+Planning:
+  Buffers: shared hit=8
+Planning Time: 0.165 ms
+Execution Time: 325.044 ms

@@ -1,0 +1,11 @@
+-- Vista materializada con índice (country, order_date, order_id)
+SELECT order_id, order_date, customer_name, total_amount
+        FROM mv_orders_by_country
+        WHERE country = 'México'
+
+Index Only Scan using ix_mv_orders_country_fecha on mv_orders_by_country (actual rows=390043 loops=1)
+  Index Cond: (country = 'México'::text)
+  Heap Fetches: 0
+  Buffers: shared hit=9501
+Planning Time: 0.052 ms
+Execution Time: 34.067 ms

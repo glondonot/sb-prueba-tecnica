@@ -1,0 +1,107 @@
+
+=== Estado inicial de main ===
+
+=== Trabajo propio en feature/new-login ===
+
+=== Mientras tanto, en main: fix de seguridad + otros cambios que NO queremos ===
+
+$ git log --oneline --graph --all
+* 3331284 feat(login): nuevo formulario de login
+| * 2fbcaca chore: subir version a 2.0
+| * 87519be fix(security): validar token con comparacion en tiempo constante (CVE interno)
+| * 1ca0454 refactor(reportes): nuevo motor de reportes
+|/  
+* 726c0ba feat: modulo de autenticacion y reportes
+
+=== 1) Identificar el commit exacto del fix en main ===
+
+$ git log main --oneline --grep=security
+87519be fix(security): validar token con comparacion en tiempo constante (CVE interno)
+
+$ git show --stat --oneline 87519beba8bbc980ab0108490cbd080af36353d8
+87519be fix(security): validar token con comparacion en tiempo constante (CVE interno)
+ auth.py | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+=== 2) Traer SOLO ese commit a feature/new-login ===
+
+$ git switch feature/new-login
+Switched to branch 'feature/new-login'
+
+$ git cherry-pick -x 87519beba8bbc980ab0108490cbd080af36353d8
+[feature/new-login bccda2d] fix(security): validar token con comparacion en tiempo constante (CVE interno)
+ Date: Wed Sep 23 10:16:54 2026 -0500
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+=== 3) Verificar resultado ===
+
+$ git log --oneline --graph --all
+* bccda2d fix(security): validar token con comparacion en tiempo constante (CVE interno)
+* 3331284 feat(login): nuevo formulario de login
+| * 2fbcaca chore: subir version a 2.0
+| * 87519be fix(security): validar token con comparacion en tiempo constante (CVE interno)
+| * 1ca0454 refactor(reportes): nuevo motor de reportes
+|/  
+* 726c0ba feat: modulo de autenticacion y reportes
+
+$ git log -1 --format=%B
+fix(security): validar token con comparacion en tiempo constante (CVE interno)
+
+(cherry picked from commit 87519beba8bbc980ab0108490cbd080af36353d8)
+
+reportes.py en la feature (debe seguir en v1):
+def generar():
+    return "v1"
+config.txt en la feature (no debe existir):
+  -> no existe, correcto
+auth.py en la feature (debe tener el fix):
+import hmac
+
+def validar_token(token, esperado):
+    # Fix de seguridad: comparacion en tiempo constante y validacion real del token
+    return token is not None and hmac.compare_digest(token, esperado)
+
+=== 4) Caso alterno: el fix llegó a main como MERGE COMMIT de un Pull Request ===
+Intentar cherry-pick de un merge commit sin indicar el padre falla:
+
+$ git cherry-pick -x 0e253f378bd2c73f267482eafdbe5c4d7f366a82
+error: commit 0e253f378bd2c73f267482eafdbe5c4d7f366a82 is a merge but no -m option was given.
+fatal: cherry-pick failed
+Con -m 1 se toma el cambio que el PR introdujo respecto a main (padre 1):
+
+$ git cherry-pick -x -m 1 0e253f378bd2c73f267482eafdbe5c4d7f366a82
+[feature/new-login e3eb92c] Merge pull request #42 from hotfix/sanitizar-usuario
+ Date: Wed Sep 23 10:16:55 2026 -0500
+ 1 file changed, 3 insertions(+)
+
+$ git log --oneline --graph feature/new-login -5
+* e3eb92c Merge pull request #42 from hotfix/sanitizar-usuario
+* bccda2d fix(security): validar token con comparacion en tiempo constante (CVE interno)
+* 3331284 feat(login): nuevo formulario de login
+* 726c0ba feat: modulo de autenticacion y reportes
+
+=== 5) Al integrar la feature en main, Git reconoce los parches ya aplicados ===
+
+$ git switch main
+Switched to branch 'main'
+
+$ git merge --no-ff feature/new-login -m Merge feature/new-login
+Merge made by the 'ort' strategy.
+ login.py | 2 ++
+ 1 file changed, 2 insertions(+)
+ create mode 100644 login.py
+
+$ git log --oneline --graph -8
+*   e80f2b0 Merge feature/new-login
+|\  
+| * e3eb92c Merge pull request #42 from hotfix/sanitizar-usuario
+| * bccda2d fix(security): validar token con comparacion en tiempo constante (CVE interno)
+| * 3331284 feat(login): nuevo formulario de login
+* |   0e253f3 Merge pull request #42 from hotfix/sanitizar-usuario
+|\ \  
+| * | 3d42802 fix(security): sanitizar nombre de usuario
+|/ /  
+* | 2fbcaca chore: subir version a 2.0
+* | 87519be fix(security): validar token con comparacion en tiempo constante (CVE interno)
+
+=== Demo finalizada (el repositorio temporal se elimina automáticamente) ===

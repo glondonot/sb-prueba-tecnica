@@ -1,0 +1,20 @@
+-- Índices cubrientes: customers(country) INCLUDE (...) y orders(customer_id) INCLUDE (...)
+SELECT o.order_id, o.order_date, c.customer_name, o.total_amount
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+WHERE c.country = 'México'
+
+Nested Loop (actual rows=390043 loops=1)
+  Buffers: shared hit=119635
+  ->  Index Only Scan using ix_customers_country on customers c (actual rows=19557 loops=1)
+        Index Cond: (country = 'México'::text)
+        Heap Fetches: 0
+        Buffers: shared hit=121
+  ->  Index Only Scan using ix_orders_customer_id on orders o (actual rows=20 loops=19557)
+        Index Cond: (customer_id = c.customer_id)
+        Heap Fetches: 0
+        Buffers: shared hit=119514
+Planning:
+  Buffers: shared hit=18
+Planning Time: 0.206 ms
+Execution Time: 64.848 ms

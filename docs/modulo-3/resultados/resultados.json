@@ -1,0 +1,200 @@
+{
+  "fecha": "2026-09-23T10:28:32",
+  "postgres": "16.15",
+  "equipo": "Windows 11 · Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+  "volumen": {
+    "clientes": 500000,
+    "pedidos": 10000000
+  },
+  "repeticiones": 5,
+  "extra": {
+    "carga": {
+      "clientes_s": 0.9,
+      "pedidos_s": 23.7,
+      "fk_s": 2.8
+    },
+    "estadisticas": {
+      "clientes_mexico": {
+        "sin_analyze": 347,
+        "con_analyze": 19833,
+        "real": 19557
+      },
+      "filas_resultado": {
+        "sin_analyze": 43332,
+        "con_analyze": 396665,
+        "real": 390043
+      },
+      "plan_sin_analyze": [
+        "Hash Join",
+        "Seq Scan on orders",
+        "Hash",
+        "Seq Scan on customers"
+      ],
+      "plan_con_analyze": [
+        "Hash Join",
+        "Seq Scan on orders",
+        "Hash",
+        "Seq Scan on customers"
+      ]
+    },
+    "tamano_orders": "712 MB",
+    "tamano_customers": "39 MB",
+    "cliente_ms_linea_base": 567.3,
+    "indices_creacion_s": 17.8,
+    "tamano_ix_orders": "473 MB",
+    "cliente_ms_indices": 484.6,
+    "mv_creacion_s": 50.2,
+    "mv_refresh_concurrently_s": 56.9,
+    "particion_creacion_s": 24.8
+  },
+  "mediciones": [
+    {
+      "escenario": "E0_linea_base",
+      "descripcion": "Línea base: solo PKs, FK sin índice, estadísticas al día",
+      "sql": "SELECT o.order_id, o.order_date, c.customer_name, o.total_amount\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.country = 'México'",
+      "ejecuciones_ms": [
+        436.86,
+        453.54,
+        466.57,
+        447.82,
+        436.44
+      ],
+      "filas": 390043,
+      "buffers_hit": 46558,
+      "buffers_read": 20944,
+      "nodos": [
+        "Gather",
+        "Hash Join",
+        "Seq Scan on orders",
+        "Hash",
+        "Seq Scan on customers"
+      ],
+      "mediana_ms": 447.82
+    },
+    {
+      "escenario": "E2_indices",
+      "descripcion": "Índices cubrientes: customers(country) INCLUDE (...) y orders(customer_id) INCLUDE (...)",
+      "sql": "SELECT o.order_id, o.order_date, c.customer_name, o.total_amount\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.country = 'México'",
+      "ejecuciones_ms": [
+        87.5,
+        91.85,
+        87.15,
+        91.68,
+        99.61
+      ],
+      "filas": 390043,
+      "buffers_hit": 119635,
+      "buffers_read": 0,
+      "nodos": [
+        "Nested Loop",
+        "Index Only Scan on customers using ix_customers_country",
+        "Index Only Scan on orders using ix_orders_customer_id"
+      ],
+      "mediana_ms": 91.68
+    },
+    {
+      "escenario": "E3_vista_materializada",
+      "descripcion": "Vista materializada con índice (country, order_date, order_id)",
+      "sql": "SELECT order_id, order_date, customer_name, total_amount\n        FROM mv_orders_by_country\n        WHERE country = 'México'",
+      "ejecuciones_ms": [
+        51.01,
+        59.38,
+        50.43,
+        63.42,
+        45.67
+      ],
+      "filas": 390043,
+      "buffers_hit": 9501,
+      "buffers_read": 0,
+      "nodos": [
+        "Index Only Scan on mv_orders_by_country using ix_mv_orders_country_fecha"
+      ],
+      "mediana_ms": 51.01
+    },
+    {
+      "escenario": "E4a_fecha_sin_particion",
+      "descripcion": "Consulta con filtro de fecha (último año) sobre orders con índices de E2",
+      "sql": "SELECT o.order_id, o.order_date, c.customer_name, o.total_amount\nFROM orders o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.country = 'México'\nAND o.order_date >= DATE '2026-01-01'",
+      "ejecuciones_ms": [
+        161.85,
+        101.81,
+        88.15,
+        77.13,
+        62.36
+      ],
+      "filas": 51372,
+      "buffers_hit": 125675,
+      "buffers_read": 0,
+      "nodos": [
+        "Gather",
+        "Nested Loop",
+        "Index Scan on customers using customers_pkey",
+        "Index Only Scan on orders using ix_orders_customer_id"
+      ],
+      "mediana_ms": 88.15
+    },
+    {
+      "escenario": "E4b_fecha_con_particion",
+      "descripcion": "Misma consulta sobre orders_part: partition pruning (solo lee 2026)",
+      "sql": "SELECT o.order_id, o.order_date, c.customer_name, o.total_amount\nFROM orders_part o\nJOIN customers c ON o.customer_id = c.customer_id\nWHERE c.country = 'México'\nAND o.order_date >= DATE '2026-01-01'",
+      "ejecuciones_ms": [
+        153.54,
+        111.01,
+        103.31,
+        106.86,
+        101.5
+      ],
+      "filas": 51372,
+      "buffers_hit": 8538,
+      "buffers_read": 0,
+      "nodos": [
+        "Gather",
+        "Hash Join",
+        "Seq Scan on orders_p2026",
+        "Hash",
+        "Index Only Scan on customers using ix_customers_country"
+      ],
+      "mediana_ms": 106.86
+    },
+    {
+      "escenario": "E5a_pagina_offset",
+      "descripcion": "Página profunda con OFFSET 100,000 LIMIT 50 (lee y descarta 100,000 filas)",
+      "sql": "SELECT order_id, order_date, customer_name, total_amount\n        FROM mv_orders_by_country\n        WHERE country = 'México'\n         ORDER BY order_date DESC, order_id DESC OFFSET 100000 LIMIT 50",
+      "ejecuciones_ms": [
+        14.08,
+        13.86,
+        13.34,
+        12.63,
+        13.81
+      ],
+      "filas": 50,
+      "buffers_hit": 2438,
+      "buffers_read": 0,
+      "nodos": [
+        "Limit",
+        "Index Only Scan on mv_orders_by_country using ix_mv_orders_country_fecha"
+      ],
+      "mediana_ms": 13.81
+    },
+    {
+      "escenario": "E5b_pagina_keyset",
+      "descripcion": "Misma página con keyset: WHERE (order_date, order_id) < (último visto) LIMIT 50",
+      "sql": "SELECT order_id, order_date, customer_name, total_amount\n        FROM mv_orders_by_country\n        WHERE country = 'México'\n         AND (order_date, order_id) < (DATE '2025-04-12', 5690620) ORDER BY order_date DESC, order_id DESC LIMIT 50",
+      "ejecuciones_ms": [
+        0.06,
+        0.05,
+        0.05,
+        0.05,
+        0.06
+      ],
+      "filas": 50,
+      "buffers_hit": 7,
+      "buffers_read": 0,
+      "nodos": [
+        "Limit",
+        "Index Only Scan on mv_orders_by_country using ix_mv_orders_country_fecha"
+      ],
+      "mediana_ms": 0.05
+    }
+  ]
+}

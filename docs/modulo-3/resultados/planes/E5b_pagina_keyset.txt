@@ -1,0 +1,14 @@
+-- Misma página con keyset: WHERE (order_date, order_id) < (último visto) LIMIT 50
+SELECT order_id, order_date, customer_name, total_amount
+        FROM mv_orders_by_country
+        WHERE country = 'México'
+         AND (order_date, order_id) < (DATE '2025-04-12', 5690620) ORDER BY order_date DESC, order_id DESC LIMIT 50
+
+Limit (actual rows=50 loops=1)
+  Buffers: shared hit=7
+  ->  Index Only Scan using ix_mv_orders_country_fecha on mv_orders_by_country (actual rows=50 loops=1)
+        Index Cond: ((country = 'México'::text) AND (ROW(order_date, order_id) < ROW('2025-04-12'::date, 5690620)))
+        Heap Fetches: 0
+        Buffers: shared hit=7
+Planning Time: 0.041 ms
+Execution Time: 0.054 ms
