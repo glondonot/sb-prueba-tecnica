@@ -1,0 +1,6 @@
+# Perfil "postgres": se activa con SPRING_PROFILES_ACTIVE=postgres (ver docker-compose.yml).
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/polizas}
+    username: ${DB_USERNAME:polizas}
+    password: ${DB_PASSWORD:polizas}
